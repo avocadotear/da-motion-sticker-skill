@@ -17,7 +17,7 @@ Read this reference when creating, resuming, packaging, or auditing a run.
 ```json
 {
   "schema_version": "0.1",
-  "skill": "da-motion-sticker",
+  "skill": "da-motion-sticker-skill",
   "job_id": "unique-ascii-id",
   "status": "awaiting_sheet_generation",
   "created_at": "RFC-3339 UTC timestamp",

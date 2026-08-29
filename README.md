@@ -1,225 +1,119 @@
-# da-motion-sticker
+# DA Motion Sticker Skill · 九宫格动态 GIF 表情包
 
-`da-motion-sticker` 是一个独立的 Codex Skill：用一张角色参考图和九项内容（或一个主题）生成 3×3 透明动态 GIF 表情包，并输出可追溯的 ZIP 交付包。
+![License](https://img.shields.io/github/license/avocadotear/da-motion-sticker-skill?style=flat-square)
+![Skill](https://img.shields.io/badge/Skill-Codex-111111?style=flat-square)
+![GIF Pack](https://img.shields.io/badge/Output-3%C3%973%20GIF%20Pack-FF4D6D?style=flat-square)
+![Styles](https://img.shields.io/badge/Styles-36%20Presets-8B5CF6?style=flat-square)
+![FFmpeg](https://img.shields.io/badge/FFmpeg-Required-007808?style=flat-square)
+![Codex](https://img.shields.io/badge/Codex-Supported-222222?style=flat-square)
 
-[English documentation](README.en.md)
+[English README](./README.en.md)
 
-## 功能
+把一张角色参考图，变成一套干净、可交付的 3×3 动态 GIF 表情包。`da-motion-sticker-skill` 会生成透明九宫格母版、逐张动效 GIF、可选静态 PNG、处理报告与 ZIP 交付包；也支持把色幕母版交给任意视频模型后再续跑抠像与循环处理。
 
-- 从精确九项清单建包，或由 Codex 根据主题推导九项并固定顺序。
-- 支持 36 种冲突安全风格，也接受名称、编号或自由描述。
-- 通过系统 `$imagegen` 生成真实 Alpha 的 3×3 母版，不直接调用 Image API。
-- 自动检查真/伪透明、九格占用、透明间隔、越界和伪棋盘格背景。
-- 自动选择绿幕 `#00FF00`、蓝幕 `#0000FF` 或洋红幕 `#FF00FF`，并把实际颜色写入视频提示词。
-- 两条动态路线：Codex 对完整贴纸做代码动效，或用户在外部 AI 视频工具生成后上传处理。
-- 输出 512×512、12 fps、约 1 秒、无限循环的透明 GIF；视频路线支持部分成功交付。
-- 可选生成正式 Codex v2 宠物，但只在用户明确提出时交给已安装的 `$hatch-pet`。
+## 亮点
 
-## 要求
+- 一张角色图 + 九项情绪/动作，或只给一个主题自动补全九项。
+- 36 种预设风格；风格只改变材质、线条与造型，透明背景、无外框与格间留白始终优先。
+- 两条动效路线：本地安全变换动效，或外部 AI 视频生成后的续跑处理。
+- 自动检查真实 Alpha、九格完整性、透明间隔、色幕冲突、GIF 透明与循环。
+- 媒体素材、任务状态、哈希和报告都保存在可移植任务目录，不记录密钥或用户主目录。
 
-- Python 3.10+
-- [Pillow](https://pillow.readthedocs.io/) 和 [NumPy](https://numpy.org/)
-- `ffmpeg` 与 `ffprobe` 可在 `PATH` 中调用
-- 用于母版生成的 Codex 内置 `$imagegen`
-- 可选：用于宠物路线的已安装 `$hatch-pet`
+## 一键安装到 Codex
 
-项目不依赖 SciPy、Node.js 或任何外部视频 API。
+需要 Git、Python 3.10+ 与 FFmpeg。下面这条命令会直接克隆到 Codex 自动扫描的本地 Skill 目录；完成后刷新或重启 Codex。
 
-### FFmpeg 前置条件
+```bash
+git clone https://github.com/avocadotear/da-motion-sticker-skill.git "$HOME/.agents/skills/da-motion-sticker-skill"
+```
 
-使用系统包管理器安装官方 FFmpeg 发行版，然后确认：
+如果该目录已存在，先不要覆盖：请进入目录执行 `git pull` 更新，或删除确认无用的旧副本后再安装。
+
+Windows PowerShell：
+
+```powershell
+git clone https://github.com/avocadotear/da-motion-sticker-skill.git "$HOME\.agents\skills\da-motion-sticker-skill"
+```
+
+也可以在任意工作目录克隆后，以软链接方式安装（适合开发）：
+
+```bash
+git clone https://github.com/avocadotear/da-motion-sticker-skill.git
+ln -s "$(pwd)/da-motion-sticker-skill" "$HOME/.agents/skills/da-motion-sticker-skill"
+```
+
+## 快速开始
+
+在 Codex 中附上一张角色参考图，然后直接说：
 
 ```text
+使用 $da-motion-sticker-skill，根据附件角色图生成九宫格动态 GIF 表情包：
+开心、委屈、生气、惊讶、害羞、疑惑、点赞、再见、睡觉。
+```
+
+或让 Skill 按主题自动补全：
+
+```text
+使用 $da-motion-sticker-skill，为附件角色做一套“周一上班”主题表情包，风格选 04。
+```
+
+需要静态图时，补充“同时导出静态 PNG”；希望走视频模型时，补充“动态路线选 AI 视频生成”。
+
+## 36 种风格一览
+
+用编号、名称或自然语言描述选择风格。下图中的风格图随仓库提供，编号与 Skill 内的预设一一对应。
+
+| <img src="assets/styles/01.png" alt="01 低保真剪纸 Meme" width="100"><br><sub>01 · 低保真剪纸 Meme</sub> | <img src="assets/styles/02.png" alt="02 Q版大头 Chibi" width="100"><br><sub>02 · Q版大头 Chibi</sub> | <img src="assets/styles/03.png" alt="03 3D 软陶 / Clay" width="100"><br><sub>03 · 3D 软陶 / Clay</sub> | <img src="assets/styles/04.png" alt="04 3D 毛绒玩偶" width="100"><br><sub>04 · 3D 毛绒玩偶</sub> | <img src="assets/styles/05.png" alt="05 搪胶公仔 / Vinyl Toy" width="100"><br><sub>05 · 搪胶公仔 / Vinyl Toy</sub> | <img src="assets/styles/06.png" alt="06 黏土定格" width="100"><br><sub>06 · 黏土定格</sub> |
+|---|---|---|---|---|---|
+| <img src="assets/styles/07.png" alt="07 像素 / Pixel Art" width="100"><br><sub>07 · 像素 / Pixel Art</sub> | <img src="assets/styles/08.png" alt="08 复古街机" width="100"><br><sub>08 · 复古街机</sub> | <img src="assets/styles/09.png" alt="09 日漫夸张表情" width="100"><br><sub>09 · 日漫夸张表情</sub> | <img src="assets/styles/10.png" alt="10 美式卡通 Meme" width="100"><br><sub>10 · 美式卡通 Meme</sub> | <img src="assets/styles/11.png" alt="11 报纸漫画" width="100"><br><sub>11 · 报纸漫画</sub> | <img src="assets/styles/12.png" alt="12 复古漫画网点" width="100"><br><sub>12 · 复古漫画网点</sub> |
+| <img src="assets/styles/13.png" alt="13 黑白漫画" width="100"><br><sub>13 · 黑白漫画</sub> | <img src="assets/styles/14.png" alt="14 手绘涂鸦" width="100"><br><sub>14 · 手绘涂鸦</sub> | <img src="assets/styles/15.png" alt="15 儿童蜡笔" width="100"><br><sub>15 · 儿童蜡笔</sub> | <img src="assets/styles/16.png" alt="16 油画恶搞" width="100"><br><sub>16 · 油画恶搞</sub> | <img src="assets/styles/17.png" alt="17 文艺复兴名画 Meme" width="100"><br><sub>17 · 文艺复兴名画 Meme</sub> | <img src="assets/styles/18.png" alt="18 浮世绘 Meme" width="100"><br><sub>18 · 浮世绘 Meme</sub> |
+| <img src="assets/styles/19.png" alt="19 中国传统年画" width="100"><br><sub>19 · 中国传统年画</sub> | <img src="assets/styles/20.png" alt="20 国潮剪纸" width="100"><br><sub>20 · 国潮剪纸</sub> | <img src="assets/styles/21.png" alt="21 水墨 Meme" width="100"><br><sub>21 · 水墨 Meme</sub> | <img src="assets/styles/22.png" alt="22 刺绣 / 布艺贴章" width="100"><br><sub>22 · 刺绣 / 布艺贴章</sub> | <img src="assets/styles/23.png" alt="23 毛毡布贴" width="100"><br><sub>23 · 毛毡布贴</sub> | <img src="assets/styles/24.png" alt="24 纸雕 / Layered Paper" width="100"><br><sub>24 · 纸雕 / Layered Paper</sub> |
+| <img src="assets/styles/25.png" alt="25 撕纸拼贴 Meme" width="100"><br><sub>25 · 撕纸拼贴 Meme</sub> | <img src="assets/styles/26.png" alt="26 Riso 孔版印刷" width="100"><br><sub>26 · Riso 孔版印刷</sub> | <img src="assets/styles/27.png" alt="27 丝网印刷" width="100"><br><sub>27 · 丝网印刷</sub> | <img src="assets/styles/28.png" alt="28 Y2K 网络表情" width="100"><br><sub>28 · Y2K 网络表情</sub> | <img src="assets/styles/29.png" alt="29 VHS / 低清截图" width="100"><br><sub>29 · VHS / 低清截图</sub> | <img src="assets/styles/30.png" alt="30 Windows 95 / 复古电脑 UI" width="100"><br><sub>30 · Windows 95 / 复古电脑 UI</sub> |
+| <img src="assets/styles/31.png" alt="31 Mac OS 复古系统图标" width="100"><br><sub>31 · Mac OS 复古系统图标</sub> | <img src="assets/styles/32.png" alt="32 Emoji 3D 混合" width="100"><br><sub>32 · Emoji 3D 混合</sub> | <img src="assets/styles/33.png" alt="33 表情符号拟人" width="100"><br><sub>33 · 表情符号拟人</sub> | <img src="assets/styles/34.png" alt="34 Reaction GIF 截帧" width="100"><br><sub>34 · Reaction GIF 截帧</sub> | <img src="assets/styles/35.png" alt="35 夸张真人头 + 卡通小身体" width="100"><br><sub>35 · 夸张真人头 + 卡通小身体</sub> | <img src="assets/styles/36.png" alt="36 半写实 3D 大头人物" width="100"><br><sub>36 · 半写实 3D 大头人物</sub> |
+
+## 动效路线
+
+| 路线 | 适合情况 | 输出方式 |
+|---|---|---|
+| Codex 直接生成（默认） | 想要快速、稳定、可循环的轻量动作 | 从 `bob`、`bounce`、`shake`、`nod`、`sway`、`pulse`、`tilt`、`hop` 等模板生成约 1 秒、12 fps 的透明 GIF。 |
+| AI 视频生成 | 想要更复杂的角色动作 | 先导出透明/色幕母版和视频提示词，在 Grok、Seedance、豆包等工具生成视频后上传续跑。Skill 自动找格、软抠像、去色溢并选循环窗口。 |
+
+本地路线只会移动、缩放、旋转或轻微挤压完整贴纸，不会凭空重绘局部肢体、眼泪、文字或特效。
+
+## 交付内容
+
+每次任务在独立运行目录中产生原子写入的 ZIP：
+
+```text
+sticker-pack.zip
+├── gifs/                       # 成功的 1–9 个透明 GIF
+├── png/                        # 仅请求静态输出时存在
+├── source/transparent-sheet.png
+├── source/chroma-sheet.png
+├── prompts/image-prompt.txt
+├── prompts/video-prompt.txt
+├── manifest.json
+└── processing-report.json
+```
+
+如果视频路线中仅部分格失败，成功 GIF 仍会进入 ZIP，失败原因写入报告；九格全部失败时不会生成空 ZIP。
+
+## 前置条件与本地开发
+
+运行时需要 Python 3.10+、Pillow、NumPy、FFmpeg 和 FFprobe；不使用 SciPy、Node.js 或外部视频 API。安装 Python 依赖：
+
+```bash
+python -m pip install -e .
 ffmpeg -version
 ffprobe -version
 ```
 
-常见安装方式：
-
-- macOS: `brew install ffmpeg`
-- Ubuntu/Debian: `sudo apt install ffmpeg`
-- Windows: `winget install Gyan.FFmpeg` 或其他可验证的 FFmpeg 发行版
-
-## 安装
-
-```text
-git clone https://github.com/avocadotear/da-motion-sticker.git
-cd da-motion-sticker
-python -m pip install -e .
-```
-
-把项目根目录作为 Skill 链接到代理 Skill 目录。如果目标已存在，**停止并检查，不覆盖**。
-
-macOS / Linux：
-
-```text
-test ! -e "$HOME/.agents/skills/da-motion-sticker"
-ln -s "$(pwd)" "$HOME/.agents/skills/da-motion-sticker"
-```
-
-Windows PowerShell（创建符号链接可能需要开发者模式或管理员权限）：
-
-```powershell
-$Target = Join-Path $HOME ".agents\skills\da-motion-sticker"
-if (Test-Path $Target) { throw "Target already exists: $Target" }
-New-Item -ItemType SymbolicLink -Path $Target -Target (Get-Location)
-```
-
-重启或刷新 Codex 后，Skill 会保持自动触发，也可显式调用 `$da-motion-sticker`。
-
-## 在 Codex 中使用
-
-推荐直接描述交付目标并附上角色参考图。
-
-### 精确九项
-
-```text
-使用 $da-motion-sticker，根据附件角色图生成动态表情包。
-九项按顺序为：骑车🚲、开车🚗、庆祝🎉、哭泣😭、用力💪、得意😎、思考🤔、惊喜🤩、吃披萨🍕。
-风格用 2 号 Q版大头，选择 Codex 直接生成 GIF。
-```
-
-### 主题自动生成
-
-```text
-使用 $da-motion-sticker，根据附件角色图做一套“周一上班”主题的九宫格动态表情包。
-请你推荐风格和九项内容，但建立任务后保持顺序不变。
-```
-
-主题模式由 Codex 先推导出九项内容，再传给脚本。`create_job.py` 本身不调用模型，也不在脚本内“猜”九项。
-
-### 同时交付静态 PNG
-
-```text
-使用 $da-motion-sticker 生成这套九宫格动态表情，并把九张静态透明 PNG 也加入最终 ZIP。
-```
-
-### 外部 AI 视频路线
-
-```text
-使用 $da-motion-sticker 先生成透明母版和色幕母版，动态路线选择“AI 视频生成”。
-```
-
-Skill 会返回色幕图和已替换实际颜色的视频提示词，然后进入 `waiting_for_video`。你在 Grok、Seedance、豆包或其他工具生成视频后上传，Skill 会通过原 `job.json` 和 SHA-256 继续，不会在多个未完成任务之间猜测。
-
-如果任务最初使用默认 `route=auto`，首次 `prepare_assets.py` 会在色幕母版完成后停在 `awaiting_route`。用户选择后必须执行对应命令：
-
-```text
-# Codex 直接生成
-python scripts/prepare_assets.py --job "/path/job.json" --route local
-
-# AI 视频生成
-python scripts/prepare_assets.py --job "/path/job.json" --route video
-```
-
-这两条命令只校验已准备产物的哈希并推进路线/状态，不重新生成素材。创建任务时如果已预选 `local` 或 `video`，后续不允许切换到反方路线。
-
-视频上传限制为 512 MiB、最长 30 秒、单边不超过 4096 像素，解码预算不超过 2.5 亿像素且最多取 360 帧。管线按真实时间戳一次解码并采样到固定 12 fps。低置信网格会保存 `qa/video-grid-preview-<视频SHA前8位>.png`；用户查看后可明确传入 `--accept-low-confidence` 或已确认的 `--grid x1,x2,y1,y2`。只有当任务已在 `video_review_required` 且用户明确上传了不同视频时，才使用 `--replace-video`；旧视频不删除，其相对路径和哈希进入历史记录。
-
-### 显式请求 Codex 宠物
-
-```text
-使用 $da-motion-sticker 完成表情包后，还要为这个角色生成并安装 Codex v2 宠物。
-```
-
-宠物请求会交给已安装 `$hatch-pet`完成正式九状态、16 环视方向和 QA。九个 Meme 动作不会被生硬当成九种宠物状态。宠物直接安装到本机 Codex pets 目录，不进入表情包 ZIP。
-
-## 底层脚本
-
-脚本是给 Skill 稳定调用的可复现接口，不是一个会自己生成创意内容的独立产品。直接调用时，九项必须已经明确。
-
-`items.json` 示例：
-
-```json
-[
-  "骑车 🚲",
-  "开车 🚗",
-  "庆祝 🎉",
-  "哭泣 😭",
-  "用力 💪",
-  "得意 😎",
-  "思考 🤔",
-  "惊喜 🤩",
-  "吃披萨 🍕"
-]
-```
-
-Codex 直接动效路线：
-
-```text
-python scripts/create_job.py --reference "/path/character.png" --items-file "/path/items.json" --style "2" --route local --output-root "/path/runs"
-python scripts/inspect_sheet.py --job "/path/runs/<job-id>/job.json" --sheet "/path/generated-transparent-sheet.png"
-python scripts/prepare_assets.py --job "/path/runs/<job-id>/job.json"
-python scripts/animate_local.py --job "/path/runs/<job-id>/job.json"
-python scripts/package_job.py --job "/path/runs/<job-id>/job.json"
-```
-
-手工视频交接路线：
-
-```text
-python scripts/create_job.py --reference "/path/character.png" --items-file "/path/items.json" --theme "周一上班" --route video --output-root "/path/runs"
-python scripts/inspect_sheet.py --job "/path/runs/<job-id>/job.json" --sheet "/path/generated-transparent-sheet.png"
-python scripts/prepare_assets.py --job "/path/runs/<job-id>/job.json"
-python scripts/process_video.py --job "/path/runs/<job-id>/job.json" --video "/path/uploaded-video.mp4"
-python scripts/package_job.py --job "/path/runs/<job-id>/job.json"
-```
-
-`--theme` 只作为任务元数据；即使提供主题，仍必须同时用 `--items` 或 `--items-file` 传入已固定的九项。路径可包含中文和空格，但应始终加引号。
-
-查看所有参数：
-
-```text
-python scripts/create_job.py --help
-python scripts/inspect_sheet.py --help
-python scripts/prepare_assets.py --help
-python scripts/animate_local.py --help
-python scripts/process_video.py --help
-python scripts/package_job.py --help
-```
-
-## 输出
-
-最终 ZIP 结构固定：
-
-```text
-gifs/                         # 1–9 个成功 GIF
-png/                          # 仅 static=true 时存在
-source/transparent-sheet.png
-source/chroma-sheet.png
-prompts/image-prompt.txt
-prompts/video-prompt.template.txt（任务创建时的占位模板）
-prompts/video-prompt.txt（色幕确定后写入的最终提示词）
-manifest.json
-processing-report.json
-```
-
-文件名使用稳定编号和跨平台安全的 ASCII slug，原始中文、Emoji 和显示名保留在清单中。`job.json` 只保存相对路径、输入哈希、状态、色幕分数、产物和 QA，不写密钥或用户主目录绝对路径。自动风格会在建任务时解析成一个确定的“编号 - 名称”（如 `2 - Q版大头 Chibi`）。不可变的 `intake` 与其规范 `input_hash` 用于防止续跑时更换参考图、九项顺序、风格或初始选项；`revision` 使并发或陈旧写入失败。
-
-任务目录、临时目录和所有产物都是任务专属的。最终文件会先在进程专属临时目录中完成校验，再以“仅当目标不存在时创建”的方式发布。任何已有文件或符号链接都会使操作停止，不会被覆盖。续跑必须指定同一个 `job.json`，重新校验 `intake`、参考图/视频和已记录产物的 SHA-256；诊断、已绑定源文件和当前状态会保留供恢复，不会猜测其他未完成任务。
-
-完整契约见 [references/output-contract.md](references/output-contract.md)，自动检查见 [references/qa.md](references/qa.md)，36 种风格见 [references/styles.md](references/styles.md)。
+脚本入口位于 [`scripts/`](./scripts)：`create_job.py`、`inspect_sheet.py`、`prepare_assets.py`、`animate_local.py`、`process_video.py` 与 `package_job.py`。Skill 是主要编排入口，脚本用于可重复的媒体处理与测试。
 
 ## 隐私与媒体权利
 
-- 参考图、母版、视频和中间帧保存在唯一任务目录中；脚本不上传它们，不记录密钥。
-- `$imagegen` 按 Codex 内置工具规则处理图像；本项目不直接调用 OpenAI Image API。
-- 外部 AI 视频平台由用户自行选择和操作。上传前请检查平台的隐私、保留和商业使用条款。
-- 你必须拥有或获得角色图、人像、商标、生成媒体和最终分发所需的权利与同意。本项目不授予对输入或生成媒体的额外权利。
-- 在分享包含真实人物或第三方 IP 的表情包前，请获得必要授权，避免误导、侵权或骚扰用途。
+任务文件保存在本地运行目录中；`job.json` 只保存相对路径、输入哈希、状态和处理结果，不写入 API 密钥或用户主目录绝对路径。请确保你拥有角色参考图、视频素材以及最终表情包的使用权；外部视频工具的上传与保留规则由该工具自身决定。
 
-## 开发与验证
+## 许可证
 
-```text
-python -m pytest
-python /path/to/skill-creator/scripts/quick_validate.py .
-```
-
-测试使用程序生成的无版权九格 PNG/视频，CI 不调用 ImageGen 或外部视频服务。支持 Python 3.10/3.12 与 macOS、Linux、Windows；媒体编解码测试需要 FFmpeg/FFprobe。
-
-## 设计来源
-
-本项目在概念层面参考了 [`motion-sticker-pack`](https://github.com/kobingogo/motion-sticker-pack/blob/6531b374c8a5c324a7d98067408832084a2182c9/SKILL.md) 的表情包工作流，但没有复制其代码。本项目独立实现透明验证、任务状态、色幕选择、媒体处理和打包，以避免继承参考项目的[历史媒体 CI 失败](https://github.com/kobingogo/motion-sticker-pack/actions/runs/33147161430)。Skill 结构遵循 [OpenAI Build skills](https://developers.openai.com/codex/build-skills)。
-
-## License
-
-MIT © DAAI。详见 [LICENSE](LICENSE)。
+[MIT License](./LICENSE) · Copyright © DAAI

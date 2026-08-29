@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "da-motion-sticker"
+name = "da-motion-sticker-skill"
 version = "0.1.0"
-description = "Deterministic media helpers for the da-motion-sticker Codex skill"
+description = "Deterministic media helpers for the da-motion-sticker-skill Codex skill"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

@@ -1,7 +1,7 @@
 interface:
-  display_name: "DA Motion Sticker"
+  display_name: "DA Motion Sticker Skill"
   short_description: "从角色参考图生成 3×3 透明动态 GIF 表情包与 ZIP"
-  default_prompt: "Use $da-motion-sticker to turn my character reference into a 3×3 animated GIF sticker pack."
+  default_prompt: "Use $da-motion-sticker-skill to turn my character reference into a 3×3 animated GIF sticker pack."
 
 policy:
   allow_implicit_invocation: true

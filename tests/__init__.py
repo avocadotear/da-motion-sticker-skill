@@ -1,2 +1,1 @@
-"""Automated tests for da-motion-sticker."""
-
+"""Automated tests for da-motion-sticker-skill."""

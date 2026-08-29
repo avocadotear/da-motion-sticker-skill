@@ -1,5 +1,5 @@
 ---
-name: da-motion-sticker
+name: da-motion-sticker-skill
 description: Create a 3×3 animated GIF sticker pack from a character reference image plus nine reactions or a theme. Use for nine-grid motion sticker, 九宫格动态表情包, or transparent sticker-pack requests; do not use for ordinary image edits, single stickers, or generic GIF conversion.
 ---
 

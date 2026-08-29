@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a portable da-motion-sticker job and its generation prompts."""
+"""Create a portable da-motion-sticker-skill job and its generation prompts."""
 
 from __future__ import annotations
 
@@ -339,7 +339,7 @@ def create_job(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Create a unique da-motion-sticker run directory and job manifest."
+        description="Create a unique da-motion-sticker-skill run directory and job manifest."
     )
     parser.add_argument("--reference", required=True, help="character reference image")
     parser.add_argument(

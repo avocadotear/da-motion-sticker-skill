@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared, dependency-light helpers for da-motion-sticker scripts.
+"""Shared, dependency-light helpers for da-motion-sticker-skill scripts.
 
 The helpers in this module deliberately keep job manifests portable: paths written
 to ``job.json`` are relative to the job directory and every resolver rejects path
@@ -25,7 +25,7 @@ from typing import Any, Iterable
 
 
 JOB_SCHEMA_VERSION = "0.1"
-SKILL_NAME = "da-motion-sticker"
+SKILL_NAME = "da-motion-sticker-skill"
 
 STATE_TRANSITIONS = {
     "awaiting_sheet_generation": {"sheet_review_required", "sheet_validated"},
@@ -667,7 +667,7 @@ def verify_artifact_record(
 
 
 def load_job(job_path: os.PathLike[str] | str) -> dict[str, Any]:
-    """Load and minimally validate a da-motion-sticker manifest."""
+    """Load and minimally validate a da-motion-sticker-skill manifest."""
 
     path = _job_file(job_path)
     try:
