@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.10"
+            media: false
+          - os: ubuntu-latest
+            python: "3.12"
+            media: true
+          - os: macos-latest
+            python: "3.10"
+            media: false
+          - os: macos-latest
+            python: "3.12"
+            media: false
+          - os: windows-latest
+            python: "3.10"
+            media: false
+          - os: windows-latest
+            python: "3.12"
+            media: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Install FFmpeg on Ubuntu media runner
+        if: matrix.media && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install FFmpeg on Windows media runner
+        if: matrix.media && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --yes --no-progress
+          }
+          ffmpeg -version
+          ffprobe -version
+
+      - name: Unit, packaging, and command-path tests
+        run: python -m pytest -q tests --ignore=tests/test_video_integration.py
+
+      - name: Synthetic FFmpeg integration tests
+        if: matrix.media
+        env:
+          DA_RUN_MEDIA_TESTS: "1"
+        run: python -m pytest -q tests/test_video_integration.py
