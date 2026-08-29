@@ -12,6 +12,9 @@ from scripts.create_job import create_job
 from scripts.inspect_sheet import inspect_job_sheet, validate_sheet
 from scripts.prepare_assets import (
     choose_chroma,
+    composite_chroma,
+    isolate_reference_foreground,
+    key_chroma_image,
     parse_chroma_key,
     prepare_job_assets,
     select_prepared_route,
@@ -100,6 +103,54 @@ def test_chroma_selection_avoids_foreground_collision() -> None:
     assert selected is not None and selected["name"] in {"blue", "magenta"}
     assert scores["green"]["collision_rate"] == 1.0
     assert scores[selected["name"]]["collision_rate"] == 0.0
+
+
+def test_reference_background_is_excluded_from_chroma_scoring() -> None:
+    image = Image.new("RGB", (100, 100), (255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((25, 15, 75, 90), fill=(0, 255, 0))
+    foreground = isolate_reference_foreground(image)
+    selected, scores, needs_review = choose_chroma(foreground)
+    assert not needs_review
+    assert selected is not None and selected["name"] in {"blue", "magenta"}
+    assert scores["green"]["collision_rate"] > 0.9
+
+
+def test_opaque_chroma_master_is_keyed_then_passes_transparent_qa(tmp_path: Path) -> None:
+    reference = make_reference(tmp_path / "reference.png")
+    job_path = create_job(
+        reference,
+        ITEMS,
+        output_root=tmp_path / "runs",
+        chroma_key="blue",
+    )
+    transparent_fixture = make_master(tmp_path / "transparent-fixture.png")
+    with Image.open(transparent_fixture) as source:
+        chroma_fixture = composite_chroma(source, (0, 0, 255))
+    chroma_path = tmp_path / "generated-blue-master.png"
+    chroma_fixture.save(chroma_path)
+    attempt = inspect_job_sheet(job_path, chroma_path)
+    assert attempt["passed"]
+    assert attempt["report"]["chroma_key"]["soft_background_ratio"] > 0.5
+    job = load_job(job_path)
+    assert job["artifacts"]["transparent_sheet"]
+    assert job["artifacts"]["chroma_sheet"]
+    with Image.open(job_path.parent / job["artifacts"]["transparent_sheet"]["path"]) as keyed:
+        assert keyed.mode == "RGBA"
+        assert np.min(np.asarray(keyed.getchannel("A"))) == 0
+    prepared = prepare_job_assets(job_path)
+    assert prepared["status"] == "awaiting_route"
+    assert prepared["selected"]["name"] == "blue"
+
+
+def test_soft_static_key_records_transparency_and_despill() -> None:
+    source = Image.new("RGB", (40, 40), (0, 255, 0))
+    draw = ImageDraw.Draw(source)
+    draw.ellipse((10, 10, 30, 30), fill=(230, 80, 55))
+    keyed, report = key_chroma_image(source, (0, 255, 0))
+    assert keyed.mode == "RGBA"
+    assert report["transparent_ratio_after_key"] > 0.5
+    assert report["despill"] is True
 
 
 def test_all_three_collisions_require_explicit_review() -> None:

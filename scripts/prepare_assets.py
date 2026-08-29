@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Split a validated master, normalize cells, and build a collision-safe chroma sheet."""
+"""Split a keyed master, normalize cells, and preserve its selected chroma sheet."""
 
 from __future__ import annotations
 
@@ -175,13 +175,100 @@ def chroma_collision_scores(image: Image.Image) -> dict[str, dict[str, Any]]:
         collision_rate = float(weights[distances <= 80].sum() / weight_total)
         soft_similarity = np.clip(1.0 - distances / 128.0, 0.0, 1.0)
         soft_score = float(np.sum(weights * soft_similarity) / weight_total)
+        separation_score = float(np.sum(weights * distances) / weight_total)
         scores[candidate["name"]] = {
             "hex": candidate["hex"],
             "rgb": list(candidate["rgb"]),
             "collision_rate": round(collision_rate, 8),
             "soft_score": round(soft_score, 8),
+            "mean_separation": round(separation_score, 8),
         }
     return scores
+
+
+def isolate_reference_foreground(image: Image.Image) -> Image.Image:
+    """Approximate the visible character region before choosing a key color.
+
+    Real Alpha is used when available. For an opaque portrait, the median border
+    color is treated as the likely backdrop and pixels close to it are excluded.
+    This keeps a large white/neutral photo background from dominating the
+    character-color collision scores.
+    """
+
+    rgba = np.asarray(image.convert("RGBA"), dtype=np.uint8).copy()
+    alpha = rgba[..., 3]
+    if np.any(alpha < 250):
+        rgba[alpha <= 8, 3] = 0
+        return Image.fromarray(rgba, "RGBA")
+
+    height, width = alpha.shape
+    border = max(1, round(min(width, height) * 0.06))
+    rgb = rgba[..., :3].astype(np.float32)
+    samples = np.concatenate(
+        (
+            rgb[:border].reshape(-1, 3),
+            rgb[-border:].reshape(-1, 3),
+            rgb[:, :border].reshape(-1, 3),
+            rgb[:, -border:].reshape(-1, 3),
+        ),
+        axis=0,
+    )
+    backdrop = np.median(samples, axis=0)
+    distance = np.linalg.norm(rgb - backdrop.reshape(1, 1, 3), axis=2)
+    foreground = distance > 42.0
+    if float(np.mean(foreground)) < 0.01:
+        # A border-touching or full-frame character has no dependable backdrop.
+        foreground = np.ones((height, width), dtype=bool)
+    rgba[..., 3] = np.where(foreground, 255, 0).astype(np.uint8)
+    return Image.fromarray(rgba, "RGBA")
+
+
+def key_chroma_image(
+    image: Image.Image,
+    key_rgb: Sequence[int],
+    *,
+    inner: float = 34.0,
+    outer: float = 92.0,
+) -> tuple[Image.Image, dict[str, Any]]:
+    """Convert one opaque chroma sheet to RGBA with a soft matte and despill."""
+
+    if len(key_rgb) != 3 or any(value < 0 or value > 255 for value in key_rgb):
+        raise ValueError("key_rgb must contain three values between 0 and 255")
+    if not 0 <= inner < outer:
+        raise ValueError("chroma key thresholds must satisfy 0 <= inner < outer")
+    source = np.asarray(image.convert("RGBA"), dtype=np.uint8).astype(np.float32)
+    rgb = source[..., :3]
+    key = np.asarray(key_rgb, dtype=np.float32).reshape(1, 1, 3)
+    distance = np.linalg.norm(rgb - key, axis=2)
+    matte = np.clip((distance - inner) / (outer - inner), 0.0, 1.0)
+    matte *= source[..., 3] / 255.0
+    edge = (matte > 0.0) & (matte < 0.98)
+    output_rgb = rgb.copy()
+    dominant = [index for index, component in enumerate(key_rgb) if component >= 250]
+    other = [index for index in range(3) if index not in dominant]
+    for channel in dominant:
+        ceiling = (
+            np.max(output_rgb[..., other], axis=2) + 12.0
+            if other
+            else np.full(matte.shape, 255.0)
+        )
+        output_rgb[..., channel] = np.where(
+            edge, np.minimum(output_rgb[..., channel], ceiling), output_rgb[..., channel]
+        )
+    output = np.empty(source.shape, dtype=np.uint8)
+    output[..., :3] = np.clip(output_rgb, 0, 255).astype(np.uint8)
+    output[..., 3] = np.round(matte * 255.0).astype(np.uint8)
+    output[output[..., 3] == 0, :3] = 0
+    report = {
+        "key_rgb": [int(value) for value in key_rgb],
+        "inner": inner,
+        "outer": outer,
+        "exact_background_ratio": round(float(np.mean(distance <= inner)), 8),
+        "soft_background_ratio": round(float(np.mean(distance <= outer)), 8),
+        "transparent_ratio_after_key": round(float(np.mean(output[..., 3] == 0)), 8),
+        "despill": True,
+    }
+    return Image.fromarray(output, "RGBA"), report
 
 
 def parse_chroma_key(value: str) -> dict[str, Any]:
@@ -225,7 +312,11 @@ def choose_chroma(
     candidate_by_name = {candidate["name"]: candidate for candidate in CHROMA_CANDIDATES}
     winner_name = min(
         scores,
-        key=lambda name: (scores[name]["collision_rate"], scores[name]["soft_score"]),
+        key=lambda name: (
+            scores[name]["collision_rate"],
+            scores[name]["soft_score"],
+            -scores[name]["mean_separation"],
+        ),
     )
     all_conflict = all(
         score["collision_rate"] >= conflict_threshold for score in scores.values()
@@ -276,7 +367,7 @@ def prepare_job_assets(
     canvas_size: int = 512,
     content_size: int = 448,
 ) -> dict[str, Any]:
-    """Prepare cell PNGs and a chroma master, then update the job manifest."""
+    """Prepare cell PNGs and the resolved video prompt, then update the manifest."""
 
     job = load_job(job_path)
     manifest_path = Path(job_path)
@@ -296,7 +387,7 @@ def prepare_job_assets(
         job["options"]["route"] = route
     sheet_qa = job.get("qa", {}).get("sheet", {})
     if not sheet_qa.get("passed"):
-        raise JobError("transparent sheet has not passed automatic QA")
+        raise JobError("keyed transparent sheet has not passed automatic QA")
     transparent_path = verify_artifact_record(
         manifest_path, job["artifacts"].get("transparent_sheet"), "transparent sheet"
     )
@@ -306,14 +397,25 @@ def prepare_job_assets(
     except (UnidentifiedImageError, OSError) as exc:
         raise ValueError(f"validated sheet is unreadable: {transparent_path}") from exc
 
-    selected, scores, needs_review = choose_chroma(
-        transparent,
-        explicit=chroma_key,
-        conflict_threshold=conflict_threshold,
-    )
+    preselected = (job.get("chroma") or {}).get("selected")
+    if isinstance(preselected, dict) and isinstance(preselected.get("hex"), str):
+        selected = parse_chroma_key(str(preselected["hex"]))
+        selected["selection"] = str(preselected.get("selection", "automatic-reference"))
+        if chroma_key and parse_chroma_key(chroma_key)["hex"] != selected["hex"]:
+            raise JobError("the chroma color selected from the reference cannot change after generation")
+        scores = dict((job.get("chroma") or {}).get("scores") or {})
+        needs_review = False
+    else:
+        # Backward compatibility for jobs created before reference-time chroma selection.
+        selected, scores, needs_review = choose_chroma(
+            transparent,
+            explicit=chroma_key,
+            conflict_threshold=conflict_threshold,
+        )
     job["chroma"] = {
         "selected": selected,
         "scores": scores,
+        "score_source": (job.get("chroma") or {}).get("score_source", "transparent_master"),
         "conflict_threshold": conflict_threshold,
         "needs_review": needs_review,
     }
@@ -374,7 +476,17 @@ def prepare_job_assets(
     if "{{CHROMA_NAME}}" not in prompt_template or "{{CHROMA_HEX}}" not in prompt_template:
         raise JobError("video prompt template is missing chroma placeholders")
     rendered_prompt = _render_video_prompt(prompt_template, selected)
-    chroma_bytes = _png_bytes(composite_chroma(transparent, selected["rgb"]))
+    existing_chroma_record = job.get("artifacts", {}).get("chroma_sheet")
+    existing_chroma_path = (
+        verify_artifact_record(manifest_path, existing_chroma_record, "chroma sheet")
+        if existing_chroma_record
+        else None
+    )
+    chroma_bytes = (
+        None
+        if existing_chroma_path is not None
+        else _png_bytes(composite_chroma(transparent, selected["rgb"]))
+    )
 
     work_dir = resolve_job_path(manifest_path, "work")
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -403,11 +515,13 @@ def prepare_job_assets(
                         "sha256": sha256_file(staged_static),
                     }
                 )
-        staged_chroma = staging / "chroma-sheet.png"
         staged_prompt = staging / "video-prompt.txt"
-        atomic_write_bytes(staged_chroma, chroma_bytes)
         atomic_write_bytes(staged_prompt, rendered_prompt.encode("utf-8"))
-        publications.extend(((staged_chroma, chroma_path), (staged_prompt, prompt_path)))
+        if chroma_bytes is not None:
+            staged_chroma = staging / "chroma-sheet.png"
+            atomic_write_bytes(staged_chroma, chroma_bytes)
+            publications.append((staged_chroma, chroma_path))
+        publications.append((staged_prompt, prompt_path))
         publish_files_atomically(publications)
 
     chroma_artifact = {
@@ -487,7 +601,7 @@ def select_prepared_route(job_path: str | Path, route: str) -> dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Split a validated sheet and choose/build its chroma master."
+        description="Split a validated keyed sheet and preserve its chroma master."
     )
     parser.add_argument("--job", required=True, help="job.json or its containing directory")
     parser.add_argument(

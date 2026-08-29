@@ -15,13 +15,15 @@ Accept a style by number, preset name, or free description. If absent, choose th
 
 Read [references/output-contract.md](references/output-contract.md) before creating or resuming a job. Resume only from the exact `job.json` identified by its manifest and input SHA-256; never guess among unfinished jobs.
 
-## Build and validate the master
+## Choose the key, then build and validate the master
 
-Read [references/prompts.md](references/prompts.md), then use the installed `$imagegen` built-in generation path with the reference image visible. Do not call an Image API, external video API, or local image-generation CLI. Ask for a square 3×3 sheet with genuine alpha and isolated subjects. Style traits never override the global transparent-background and no-outer-border rules.
+At job creation, measure visible character colors in the reference and select the least-conflicting fixed key: green `#00FF00`, blue `#0000FF`, or magenta `#FF00FF`. Ignore a likely flat photo backdrop when estimating character colors. Save all three scores and the chosen key in `job.json` before generation. If all three materially collide, stop and ask the user to choose one; never guess or accept another color.
 
-Run `scripts/inspect_sheet.py`, then follow [references/qa.md](references/qa.md). On automatic QA failure, make one targeted `$imagegen` retry. If that also fails, return the generated overlay preview and stop for user correction; do not keep regenerating.
+Read [references/prompts.md](references/prompts.md), then use the installed `$imagegen` built-in generation path with the reference image visible. Do not call an Image API, external video API, or local image-generation CLI. Ask for a square 3×3 sheet on the exact selected fully opaque key color, with wide pure-color gutters and outer padding. Style traits never override the no-border, isolated-subject, or exact-key-background rules.
 
-Run `scripts/prepare_assets.py` only after the sheet passes. It splits and pads nine 512×512 assets, selects green, blue, or magenta by measured foreground collision, saves the chroma scores, and writes the selected color name and hex value into the video prompt. If every candidate clearly conflicts, stop and ask the user for a chroma choice.
+Run `scripts/inspect_sheet.py`, which soft-keys the selected color, removes edge spill, creates the real-alpha transparent master, and then applies the normal nine-grid Alpha QA from [references/qa.md](references/qa.md). On automatic QA failure, make one targeted `$imagegen` retry using the same selected key. If that also fails, return the overlay preview and stop for user correction; do not keep regenerating.
+
+Run `scripts/prepare_assets.py` only after the keyed transparent sheet passes. It splits and pads nine 512×512 assets, preserves the validated generated chroma master, and writes the already-selected color name and hex value into the video prompt. Do not reselect or change the key after image generation.
 
 The chroma set is closed: accept only green `#00FF00`, blue `#0000FF`, or magenta `#FF00FF`, including for a user's explicit conflict-resolution choice. Never accept an arbitrary hex color.
 

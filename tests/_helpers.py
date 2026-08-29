@@ -118,6 +118,7 @@ def ready_job(
         pack_name="测试 表情包",
         static=static,
         route=route,
+        chroma_key=chroma,
     )
     master = make_master(root / "input" / "透明 九宫格.png")
     attempt = inspect_job_sheet(job_path, master)

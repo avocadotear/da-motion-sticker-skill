@@ -2,13 +2,13 @@
 
 These templates are authoritative scaffolding. Fill every placeholder from the verified job manifest. Do not weaken the constraints when applying a style.
 
-## Transparent 3×3 master
+## Chroma-screen 3×3 master
 
 Use the installed `$imagegen` built-in path. Make the character reference visible and label it as the **identity reference**, not a pixel-exact edit target. Do not call an Image API or CLI fallback from this skill.
 
 ```text
 Use case: stylized-concept
-Asset type: transparent 3×3 reaction-sticker master sheet
+Asset type: chroma-screen 3×3 reaction-sticker master sheet
 
 STYLE DEFINITION:
 Apply this resolved style to the material, internal line work, palette, texture, and character-shape treatment: {{STYLE_NAME}}. Apply only these conflict-safe traits: {{STYLE_TRAITS}}. Keep the same visual style consistently across all nine characters.
@@ -28,6 +28,9 @@ ACTION DEFINITIONS — FIXED GRID ORDER, LEFT TO RIGHT AND TOP TO BOTTOM:
 IDENTITY LOCK:
 Use the supplied character image as the identity reference. Show the same recognizable character exactly nine times, once per cell. Preserve the face, head shape, hair, clothing, signature colors, body proportions, and identity-essential details. Change only the expression, pose, and action required by each definition above. Do not add unrequested text; if an action explicitly requires visible text, render only that exact text inside its own safe cell.
 
+CHROMA GENERATION OVERRIDE — THIS OVERRIDES ANY LATER TRANSPARENT-BACKGROUND WORDING:
+For this generation pass, do not output Alpha transparency. Render one spatially uniform, fully opaque pure {{CHROMA_NAME}} ({{CHROMA_HEX}}) background across the entire square canvas, including all gutters and corners. The background must contain no gradient, texture, checkerboard, lighting variation, shadow, panel, scenery, or compression pattern. Every outer character silhouette must meet this exact pure color directly. Keep wide empty {{CHROMA_NAME}} ({{CHROMA_HEX}}) gaps between all cells and around every canvas edge so deterministic chroma keying can create transparency afterward. Do not use {{CHROMA_NAME}} ({{CHROMA_HEX}}) anywhere inside the characters. Interpret the later word “透明” as the final post-keying deliverable; the generated master itself must use this exact opaque chroma background.
+
 Use exaggerated internet-reaction expressions, including crying, confusion, shock, smugness, side-eye, and deadpan disbelief, with awkward poses, low-fi cutout textures, and absurd humor.
 
 创建一张正方形（1:1）透明贴纸页，包含九个各不相同的贴纸，按 3×3 网格排列，每个贴纸呈现不同的表情、姿势或反应。贴纸之间留出较宽且完全透明的间隔。
@@ -45,7 +48,7 @@ Automatic QA permits one retry only. Reuse the same reference, order, style and 
 Regenerate the same nine-cell master and correct only these validation failures:
 {{QA_FAILURES}}
 
-Keep every requirement from the original prompt. In particular, preserve true alpha, wide empty gutters, transparent outer padding, complete subjects, fixed item order and no outer border. Do not change the character identity or approved cells merely to vary the result.
+Keep every requirement from the original prompt. In particular, preserve the exact selected opaque chroma background, wide pure-color gutters and outer padding, complete subjects, fixed item order and no outer border. Do not change the selected key color, character identity or approved cells merely to vary the result.
 ```
 
 If the retry fails, stop and present the overlay preview; do not attempt a third generation.

@@ -42,6 +42,11 @@ except ImportError:  # pragma: no cover - exercised by CLI integration tests
         utc_now_iso,
     )
 
+try:
+    from .prepare_assets import choose_chroma, isolate_reference_foreground
+except ImportError:  # pragma: no cover - exercised by CLI integration tests
+    from prepare_assets import choose_chroma, isolate_reference_foreground  # type: ignore
+
 
 IMAGE_PROMPT_PATH = "prompts/image-prompt.txt"
 VIDEO_PROMPT_PATH = "prompts/video-prompt.txt"
@@ -182,10 +187,18 @@ def _reference_suffix(image_format: str, source: Path) -> str:
     return by_format.get(image_format, source.suffix.lower() or ".image")
 
 
-def build_image_prompt(contents: Sequence[str], style: str) -> str:
+def build_image_prompt(
+    contents: Sequence[str],
+    style: str,
+    chroma: dict[str, object] | None = None,
+) -> str:
     numbered = "\n".join(f"{index}. {label}" for index, label in enumerate(contents, 1))
+    selected = chroma or {
+        "display_name": "green / 绿色",
+        "hex": "#00FF00",
+    }
     return f"""Use case: stylized-concept
-Asset type: transparent 3×3 reaction-sticker master sheet
+Asset type: chroma-screen 3×3 reaction-sticker master sheet
 
 STYLE DEFINITION:
 Apply this resolved style to the material, internal line work, palette, texture, and character-shape treatment: {style}.
@@ -196,6 +209,9 @@ ACTION DEFINITIONS — FIXED GRID ORDER, LEFT TO RIGHT AND TOP TO BOTTOM:
 
 IDENTITY LOCK:
 Use the supplied character image as the identity reference. Show the same recognizable character exactly nine times, once per cell. Preserve the face, head shape, hair, clothing, signature colors, body proportions, and identity-essential details. Change only the expression, pose, and action required by each definition above. Do not add unrequested text; if an action explicitly requires visible text, render only that exact text inside its own safe cell.
+
+CHROMA GENERATION OVERRIDE — THIS OVERRIDES ANY LATER TRANSPARENT-BACKGROUND WORDING:
+For this generation pass, do not output Alpha transparency. Render one spatially uniform, fully opaque pure {selected['display_name']} ({selected['hex']}) background across the entire square canvas, including all gutters and corners. The background must contain no gradient, texture, checkerboard, lighting variation, shadow, panel, scenery, or compression pattern. Every outer character silhouette must meet this exact pure color directly. Keep wide empty {selected['display_name']} ({selected['hex']}) gaps between all cells and around every canvas edge so deterministic chroma keying can create transparency afterward. Do not use {selected['display_name']} ({selected['hex']}) anywhere inside the characters. Interpret the later word “透明” as the final post-keying deliverable; the generated master itself must use this exact opaque chroma background.
 
 {FIXED_IMAGE_PROMPT_SUFFIX}"""
 
@@ -224,6 +240,7 @@ def create_job(
     static: bool = False,
     route: str = "auto",
     pet: bool = False,
+    chroma_key: str | None = None,
 ) -> Path:
     """Create a unique run directory and return its ``job.json`` path."""
 
@@ -234,6 +251,20 @@ def create_job(
     reference_path = Path(reference).expanduser().resolve()
     image_format, reference_size = _validate_reference(reference_path)
     reference_hash = sha256_file(reference_path)
+    try:
+        with Image.open(reference_path) as reference_image:
+            selection_image = isolate_reference_foreground(reference_image)
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError(f"reference is not a readable image: {reference_path}") from exc
+    selected_chroma, chroma_scores, chroma_needs_review = choose_chroma(
+        selection_image,
+        explicit=chroma_key,
+    )
+    if chroma_needs_review or selected_chroma is None:
+        raise ValueError(
+            "green, blue, and magenta all significantly collide with the reference character; "
+            "rerun with --chroma-key green, blue, or magenta"
+        )
 
     display_name = (pack_name or theme or reference_path.stem or "Sticker Pack").strip()
     if not display_name:
@@ -268,6 +299,8 @@ def create_job(
         "static_requested": bool(static),
         "route_requested": route,
         "pet_requested": bool(pet),
+        "chroma_requested": chroma_key or "auto",
+        "chroma_selected": selected_chroma["name"],
     }
     paths = {
         "image_prompt": IMAGE_PROMPT_PATH,
@@ -308,8 +341,10 @@ def create_job(
         "options": {"static": bool(static), "route": route, "pet": bool(pet)},
         "paths": paths,
         "chroma": {
-            "selected": None,
-            "scores": {},
+            "selected": selected_chroma,
+            "scores": chroma_scores,
+            "score_source": "reference_foreground",
+            "conflict_threshold": 0.15,
             "needs_review": False,
         },
         "artifacts": {
@@ -327,7 +362,7 @@ def create_job(
 
     atomic_write_text(
         run_dir / IMAGE_PROMPT_PATH,
-        build_image_prompt(clean_contents, resolved_style),
+        build_image_prompt(clean_contents, resolved_style, selected_chroma),
     )
     atomic_write_text(
         run_dir / VIDEO_PROMPT_TEMPLATE_PATH,
@@ -361,6 +396,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--route", choices=("auto", "local", "video"), default="auto"
     )
     parser.add_argument("--pet", action="store_true", help="record an explicit pet request")
+    parser.add_argument(
+        "--chroma-key",
+        choices=("green", "blue", "magenta"),
+        help="override automatic reference-color analysis with one fixed key color",
+    )
     parser.add_argument("--output-root", default="runs", help="parent directory for unique jobs")
     return parser
 
@@ -384,6 +424,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             static=args.static,
             route=args.route,
             pet=args.pet,
+            chroma_key=args.chroma_key,
         )
     except (FileNotFoundError, ValueError, OSError, json.JSONDecodeError) as exc:
         parser.exit(2, f"error: {exc}\n")

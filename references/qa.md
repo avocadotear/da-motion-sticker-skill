@@ -2,11 +2,14 @@
 
 Automated checks are gates, not suggestions. Record machine-readable measurements and named failure reasons in `job.json` and `processing-report.json`.
 
-## Transparent master
+## Generated chroma master and keyed transparent master
 
-The sheet passes only when all of these are true:
+Select the key from the reference before generation. For opaque references, exclude a likely flat border-connected backdrop from character-color scoring. Record all three candidate scores, the algorithm source, thresholds, selected name, RGB and hex in `job.json`.
 
-- It decodes as a square image with an alpha channel and includes genuinely transparent pixels. An opaque RGB image, an all-255 alpha channel, white/solid fill, or visible checkerboard pattern is not transparency.
+The generated sheet is first soft-keyed using the recorded color. Suppress key-color spill only on partial-alpha edge pixels. Preserve the original opaque chroma sheet as `source/chroma-sheet.png` and save the keyed result as `source/transparent-sheet.png` only after the checks below pass:
+
+- The generated input decodes as a square still and contains enough pixels matching the selected key to establish a real background. A different solid color, checkerboard, textured backdrop, or insufficient key coverage fails.
+- After keying, the result has genuine alpha, substantial Alpha=0 pixels, and non-empty foreground. An all-255 alpha result fails.
 - All nine fixed cells contain meaningful non-transparent foreground.
 - Horizontal and vertical grid gutters contain sufficiently transparent separation across the full sheet, not merely a few empty points.
 - Foreground does not touch the outer canvas edge, a cell boundary, or a neighboring cell's safety region.
@@ -15,7 +18,7 @@ The sheet passes only when all of these are true:
 
 Use alpha occupancy as the primary evidence. RGB values hidden under alpha=0 do not count as visible foreground. Detect likely fake checkerboards from repeated alternating light/dark blocks in opaque or nearly opaque background regions and report that diagnosis explicitly.
 
-On failure, save `qa/sheet-overlay.png` showing thirds, gutter/safety zones, occupied bounds and failed areas. `$imagegen` may retry once using the targeted failure list. A second failure sets `sheet_review_required` and stops for user correction.
+On failure, save `qa/sheet-overlay.png` showing the keyed result, thirds, gutter/safety zones, occupied bounds and failed areas. `$imagegen` may retry once using the targeted failure list and the same key. A second failure sets `sheet_review_required` and stops for user correction.
 
 ## Split cells
 
@@ -38,9 +41,9 @@ Candidate colors are fixed:
 | blue / 蓝色 | `#0000FF` |
 | magenta / 洋红色 | `#FF00FF` |
 
-Measure each candidate against visible foreground pixels only. The collision score is the fraction of foreground colors within the configured color-distance tolerance of that candidate; semitransparent edge pixels may be weighted by alpha. Save the three scores, tolerance and implementation version. Pick the lowest score. Ask the user only when every candidate exceeds the implementation's documented conflict threshold; never silently default to green.
+Measure each candidate against visible reference-character pixels before image generation. The collision score is the fraction of character colors within the configured color-distance tolerance of that candidate; semitransparent edge pixels may be weighted by alpha. Save the three scores, tolerance and implementation version. Pick the lowest score. Ask the user only when every candidate exceeds the implementation's documented conflict threshold; never silently default to green.
 
-The chroma master must be fully opaque, use one spatially uniform selected color outside the subjects, preserve the 3×3 layout, and contain no transparency. The generated video prompt must repeat the selected human-readable name and exact hex consistently.
+The generated chroma master must be fully opaque, use the preselected color outside the subjects, preserve the 3×3 layout, and contain no transparency. The generated video prompt must repeat the selected human-readable name and exact hex consistently. Never select a different key after the generated master has been accepted.
 
 ## Local animation
 

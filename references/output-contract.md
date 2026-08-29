@@ -71,8 +71,9 @@ Read this reference when creating, resuming, packaging, or auditing a run.
     "processing_report": "processing-report.json"
   },
   "chroma": {
-    "selected": null,
-    "scores": {},
+    "selected": {"name": "blue", "hex": "#0000FF", "rgb": [0, 0, 255]},
+    "scores": {"green": {}, "blue": {}, "magenta": {}},
+    "score_source": "reference_foreground",
     "needs_review": false
   },
   "artifacts": {
@@ -151,9 +152,9 @@ Intermediates are job-local and never enter the final archive unless the ZIP con
 
 ## Script responsibilities
 
-- `scripts/create_job.py`: create a unique run, copy/hash the reference, freeze nine items and write prompts/job state. Theme inference happens in Codex before this command; the script always receives the explicit nine-item list.
-- `scripts/inspect_sheet.py`: copy and validate the generated transparent sheet, record QA, and render an overlay when useful.
-- `scripts/prepare_assets.py`: split/trim/pad cells, measure chroma collision, create the chroma master, and finish the dynamic video prompt.
+- `scripts/create_job.py`: create a unique run, copy/hash the reference, freeze nine items, choose the least-conflicting fixed key from reference-character colors, and write resolved prompts/job state. Theme inference happens in Codex before this command; the script always receives the explicit nine-item list.
+- `scripts/inspect_sheet.py`: soft-key and despill the generated chroma sheet, validate the resulting transparent sheet, preserve both masters, record QA, and render an overlay when useful.
+- `scripts/prepare_assets.py`: split/trim/pad keyed cells, preserve the preselected chroma master, and finish the dynamic video prompt without changing the key.
 - `scripts/animate_local.py`: create `motion-plan.json` and nine whole-sticker GIFs with the supported templates.
 - `scripts/process_video.py`: hash and decode one uploaded video once, detect the grid across frames, key/crop/pad cells, select loop windows, encode successful GIFs, and record per-cell failures.
 - `scripts/package_job.py`: validate required artifacts and atomically build a deterministic ZIP. It performs no generation or media repair.

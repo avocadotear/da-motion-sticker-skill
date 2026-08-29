@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate a transparent 3×3 master sheet and render an inspection overlay."""
+"""Key and validate a chroma-screen 3×3 master, then render an overlay."""
 
 from __future__ import annotations
 
@@ -33,6 +33,11 @@ except ImportError:  # pragma: no cover
         sha256_file,
         update_status,
     )
+
+try:
+    from .prepare_assets import composite_chroma, key_chroma_image
+except ImportError:  # pragma: no cover
+    from prepare_assets import composite_chroma, key_chroma_image  # type: ignore
 
 
 ALPHA_FOREGROUND_THRESHOLD = 8
@@ -99,21 +104,30 @@ def _dominant_fake_checkerboard(rgb: np.ndarray, alpha: np.ndarray) -> dict[str,
 
 
 def validate_sheet(
-    image_path: str | Path,
+    image_path: str | Path | Image.Image,
     *,
     alpha_threshold: int = ALPHA_FOREGROUND_THRESHOLD,
 ) -> tuple[dict[str, Any], Image.Image]:
     """Return a JSON-safe QA report and the normalized RGBA master image."""
 
-    path = Path(image_path)
+    path = Path(image_path) if not isinstance(image_path, Image.Image) else None
     try:
-        with Image.open(path) as source:
+        if isinstance(image_path, Image.Image):
+            source = image_path
             original_mode = source.mode
             original_format = source.format
             frame_count = int(getattr(source, "n_frames", 1))
             has_alpha_channel = "A" in source.getbands() or "transparency" in source.info
-            source.seek(0)
             rgba_image = ImageOps.exif_transpose(source).convert("RGBA").copy()
+        else:
+            assert path is not None
+            with Image.open(path) as source:
+                original_mode = source.mode
+                original_format = source.format
+                frame_count = int(getattr(source, "n_frames", 1))
+                has_alpha_channel = "A" in source.getbands() or "transparency" in source.info
+                source.seek(0)
+                rgba_image = ImageOps.exif_transpose(source).convert("RGBA").copy()
     except (UnidentifiedImageError, OSError) as exc:
         raise ValueError(f"sheet is not a readable image: {path}") from exc
 
@@ -395,7 +409,7 @@ def inspect_job_sheet(
     attempts = sheet_qa.setdefault("attempts", [])
     if sheet_qa.get("passed") or job.get("status") == "sheet_validated":
         raise JobError(
-            "this job already has a validated transparent master; refusing an accidental recheck"
+            "this job already has a validated keyed master; refusing an accidental recheck"
         )
     automatic_attempts = sum(
         1 for attempt in attempts if attempt.get("mode", "automatic") == "automatic"
@@ -409,7 +423,36 @@ def inspect_job_sheet(
     source = Path(sheet_path).expanduser().resolve()
     if not source.is_file():
         raise FileNotFoundError(f"sheet does not exist: {source}")
-    report, normalized = validate_sheet(source)
+    selected = (job.get("chroma") or {}).get("selected")
+    if not isinstance(selected, dict) or not isinstance(selected.get("rgb"), list):
+        raise JobError("job does not record the preselected chroma color")
+    try:
+        with Image.open(source) as candidate_file:
+            candidate = ImageOps.exif_transpose(candidate_file).convert("RGBA").copy()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError(f"sheet is not a readable image: {source}") from exc
+    if np.any(np.asarray(candidate.getchannel("A"), dtype=np.uint8) < 255):
+        normalized = candidate
+        chroma_source = composite_chroma(candidate, selected["rgb"])
+        _, key_report = key_chroma_image(chroma_source, selected["rgb"])
+        key_report["source_had_alpha"] = True
+    else:
+        chroma_source = candidate
+        normalized, key_report = key_chroma_image(candidate, selected["rgb"])
+        key_report["source_had_alpha"] = False
+    report, normalized = validate_sheet(normalized)
+    report["chroma_key"] = key_report
+    if key_report["soft_background_ratio"] < 0.10:
+        report["issues"].append(
+            _issue(
+                "insufficient_chroma_background",
+                "generated sheet does not contain enough of the selected chroma color",
+                selected=selected.get("name"),
+                selected_hex=selected.get("hex"),
+                soft_background_ratio=key_report["soft_background_ratio"],
+            )
+        )
+        report["passed"] = False
     source_hash = sha256_file(source)
     attempt_number = len(attempts) + 1
     overlay_relative = f"qa/sheet-attempt-{attempt_number:02d}-overlay.png"
@@ -430,6 +473,7 @@ def inspect_job_sheet(
 
     if report["passed"]:
         transparent_path = resolve_job_path(manifest_path, job["paths"]["transparent_sheet"])
+        chroma_path = resolve_job_path(manifest_path, job["paths"]["chroma_sheet"])
         if transparent_path.exists():
             try:
                 with Image.open(transparent_path) as existing:
@@ -446,12 +490,33 @@ def inspect_job_sheet(
                 )
         else:
             _write_png(transparent_path, normalized)
+        if chroma_path.exists():
+            try:
+                with Image.open(chroma_path) as existing:
+                    same_chroma_pixels = np.array_equal(
+                        np.asarray(existing.convert("RGBA")), np.asarray(chroma_source)
+                    )
+            except (UnidentifiedImageError, OSError) as exc:
+                raise FileExistsError(
+                    f"existing chroma master is unreadable: {chroma_path}"
+                ) from exc
+            if not same_chroma_pixels:
+                raise FileExistsError(
+                    f"refusing to replace validated chroma master: {chroma_path}"
+                )
+        else:
+            _write_png(chroma_path, chroma_source)
         transparent_hash = sha256_file(transparent_path)
+        chroma_hash = sha256_file(chroma_path)
         artifact = {
             "path": relative_job_path(manifest_path, transparent_path),
             "sha256": transparent_hash,
         }
         job["artifacts"]["transparent_sheet"] = artifact
+        job["artifacts"]["chroma_sheet"] = {
+            "path": relative_job_path(manifest_path, chroma_path),
+            "sha256": chroma_hash,
+        }
         update_status(
             manifest_path,
             job,
@@ -477,10 +542,10 @@ def inspect_job_sheet(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Validate a generated 3x3 transparent sticker master."
+        description="Key and validate a generated 3x3 chroma-screen sticker master."
     )
     parser.add_argument("--job", required=True, help="job.json or its containing directory")
-    parser.add_argument("--sheet", required=True, help="candidate transparent master image")
+    parser.add_argument("--sheet", required=True, help="candidate chroma-screen master image")
     parser.add_argument(
         "--after-review",
         action="store_true",
