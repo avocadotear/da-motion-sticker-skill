@@ -274,7 +274,9 @@ def _write_reproducible_zip(source_root: Path, destination: Path) -> None:
                 info.compress_type = zipfile.ZIP_STORED
                 info.external_attr = 0o100644 << 16
                 archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_STORED)
-        with temporary.open("rb") as handle:
+        # Windows rejects fsync on a read-only descriptor; opening read/write
+        # preserves the same durability step across all supported platforms.
+        with temporary.open("r+b") as handle:
             os.fsync(handle.fileno())
         with zipfile.ZipFile(temporary, "r") as archive:
             actual_names = archive.namelist()
