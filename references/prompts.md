@@ -10,8 +10,10 @@ Use the installed `$imagegen` built-in path. Make the character reference visibl
 Use case: stylized-concept
 Asset type: transparent 3×3 reaction-sticker master sheet
 
-Primary request:
-Using the attached character identity reference, create exactly nine distinct character stickers in one square 1:1 image. Arrange them in a strict 3×3 grid, ordered left-to-right and top-to-bottom as follows:
+STYLE DEFINITION:
+Apply this resolved style to the material, internal line work, palette, texture, and character-shape treatment: {{STYLE_NAME}}. Apply only these conflict-safe traits: {{STYLE_TRAITS}}. Keep the same visual style consistently across all nine characters.
+
+ACTION DEFINITIONS — FIXED GRID ORDER, LEFT TO RIGHT AND TOP TO BOTTOM:
 
 1. {{ITEM_1}}
 2. {{ITEM_2}}
@@ -23,23 +25,16 @@ Using the attached character identity reference, create exactly nine distinct ch
 8. {{ITEM_8}}
 9. {{ITEM_9}}
 
-Identity lock:
-Keep the same recognizable character identity, face, head shape, hair, clothing, signature colors, body proportions and identity-essential props in all nine cells. Each cell may change only the expression, pose and action needed for its assigned item. Show one complete isolated character per cell.
+IDENTITY LOCK:
+Use the supplied character image as the identity reference. Show the same recognizable character exactly nine times, once per cell. Preserve the face, head shape, hair, clothing, signature colors, body proportions, and identity-essential details. Change only the expression, pose, and action required by each definition above. Do not add unrequested text; if an action explicitly requires visible text, render only that exact text inside its own safe cell.
 
-Style/medium:
-{{STYLE_NAME}}. Apply only these conflict-safe traits: {{STYLE_TRAITS}}.
+Use exaggerated internet-reaction expressions, including crying, confusion, shock, smugness, side-eye, and deadpan disbelief, with awkward poses, low-fi cutout textures, and absurd humor.
 
-Composition:
-Square 1:1 canvas; exact 3×3 organization; nine non-empty independent subjects; generous fully transparent gutters horizontally and vertically; generous transparent padding around the outer canvas. No subject may touch the canvas edge, a grid boundary, a neighboring subject or another cell.
+创建一张正方形（1:1）透明贴纸页，包含九个各不相同的贴纸，按 3×3 网格排列，每个贴纸呈现不同的表情、姿势或反应。贴纸之间留出较宽且完全透明的间隔。
 
-Transparency:
-Output genuine RGBA transparency. The area outside each subject must have real alpha=0, not a white background, colored background, checkerboard pattern or simulated transparency. Every outer character silhouette must meet transparent pixels directly.
+无背景、阴影或重叠元素。所有人物均直接置于透明背景上，人物外轮廓与透明区域直接相接。禁止出现任何白色描边、黑色外描边、彩色描边、贴纸切边、轮廓边框、光晕、阴影或半透明边缘。不要模拟实体贴纸的白色切割边缘。
 
-Hard constraints:
-No outer white, black or colored outline; no sticker cutline or border; no background; no cell panel; no scenery; no cast, contact or drop shadow; no floor patch; no glow, halo or aura; no detached particles or decorations; no cross-cell element; no overlap between cells. Internal line art that belongs to the selected style is allowed. Keep all material and print texture clipped within the subject. Do not add captions, labels or unrequested text. If an item explicitly requires visible text, render only that exact text inside its own safe cell.
-
-Deliverable:
-One square PNG with a genuine alpha channel, suitable for deterministic 3×3 validation and splitting.
+每个人物应像已经精准抠图完成的独立 PNG 表情素材。允许人物内部保留原本画风所需要的黑色线稿，但人物最外层禁止出现任何额外白色描边或贴纸边框。
 ```
 
 ### Targeted retry

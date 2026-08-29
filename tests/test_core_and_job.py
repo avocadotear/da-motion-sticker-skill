@@ -14,7 +14,7 @@ from scripts._core import (
     slugify,
     update_status,
 )
-from scripts.create_job import create_job
+from scripts.create_job import FIXED_IMAGE_PROMPT_SUFFIX, build_image_prompt, create_job
 from scripts.process_video import process_job
 
 from ._helpers import ITEMS, make_reference, ready_job
@@ -47,6 +47,14 @@ def test_input_hash_is_content_stable_and_option_sensitive(tmp_path: Path) -> No
     job_c = create_job(second, [*ITEMS[:-1], "different"], output_root=tmp_path / "c", style="auto")
     assert load_job(job_a)["input_hash"] == load_job(job_b)["input_hash"]
     assert load_job(job_a)["input_hash"] != load_job(job_c)["input_hash"]
+
+
+def test_image_prompt_defines_style_and_actions_before_fixed_suffix() -> None:
+    prompt = build_image_prompt(ITEMS, "31 - Mac OS 复古系统图标")
+    assert prompt.index("STYLE DEFINITION:") < prompt.index("ACTION DEFINITIONS")
+    assert prompt.index("ACTION DEFINITIONS") < prompt.index("IDENTITY LOCK:")
+    assert prompt.endswith(FIXED_IMAGE_PROMPT_SUFFIX)
+    assert FIXED_IMAGE_PROMPT_SUFFIX in prompt
 
 
 def test_video_resume_rejects_a_different_sha256_before_processing(tmp_path: Path) -> None:

@@ -47,6 +47,14 @@ IMAGE_PROMPT_PATH = "prompts/image-prompt.txt"
 VIDEO_PROMPT_PATH = "prompts/video-prompt.txt"
 VIDEO_PROMPT_TEMPLATE_PATH = "prompts/video-prompt.template.txt"
 
+FIXED_IMAGE_PROMPT_SUFFIX = """Use exaggerated internet-reaction expressions, including crying, confusion, shock, smugness, side-eye, and deadpan disbelief, with awkward poses, low-fi cutout textures, and absurd humor.
+
+创建一张正方形（1:1）透明贴纸页，包含九个各不相同的贴纸，按 3×3 网格排列，每个贴纸呈现不同的表情、姿势或反应。贴纸之间留出较宽且完全透明的间隔。
+
+无背景、阴影或重叠元素。所有人物均直接置于透明背景上，人物外轮廓与透明区域直接相接。禁止出现任何白色描边、黑色外描边、彩色描边、贴纸切边、轮廓边框、光晕、阴影或半透明边缘。不要模拟实体贴纸的白色切割边缘。
+
+每个人物应像已经精准抠图完成的独立 PNG 表情素材。允许人物内部保留原本画风所需要的黑色线稿，但人物最外层禁止出现任何额外白色描边或贴纸边框。"""
+
 STYLE_NAMES = (
     "低保真剪纸 Meme", "Q版大头 Chibi", "3D 软陶 / Clay", "3D 毛绒玩偶",
     "搪胶公仔 / Vinyl Toy", "黏土定格", "像素 / Pixel Art", "复古街机",
@@ -176,28 +184,20 @@ def _reference_suffix(image_format: str, source: Path) -> str:
 
 def build_image_prompt(contents: Sequence[str], style: str) -> str:
     numbered = "\n".join(f"{index}. {label}" for index, label in enumerate(contents, 1))
-    style_text = f"Apply this resolved style only to material, line, and shape treatment: {style}."
-    return f"""Create one production-ready sticker master sheet from the supplied character reference.
+    return f"""Use case: stylized-concept
+Asset type: transparent 3×3 reaction-sticker master sheet
 
-HARD LAYOUT AND ALPHA RULES (these override every style convention):
-- Square 1:1 canvas containing an exact 3×3 grid, ordered left-to-right then top-to-bottom.
-- Show the same recognizable character exactly nine times, once per cell, performing the nine contents below.
-- Leave wide, fully transparent gaps between every cell and around all four canvas edges.
-- Output real RGBA transparency (actual Alpha=0 pixels), never a drawn checkerboard or a simulated transparent background.
-- No outer sticker outline, border, panel, background, cast shadow, glow, halo, watermark, or UI frame.
-- No character or accessory may cross a cell boundary, touch the canvas edge, or overlap another cell.
-- Keep every complete character comfortably inside its own cell with animation-safe breathing room.
+STYLE DEFINITION:
+Apply this resolved style to the material, internal line work, palette, texture, and character-shape treatment: {style}.
+Keep the same visual style consistently across all nine characters.
 
-STYLE:
-{style_text}
-The transparent/no-outline/no-background rules above always take priority over style traits.
-Do not add unrequested text. If an item explicitly requires visible text, render only that exact text inside its own safe cell.
-
-NINE CONTENTS IN FIXED GRID ORDER:
+ACTION DEFINITIONS — FIXED GRID ORDER, LEFT TO RIGHT AND TOP TO BOTTOM:
 {numbered}
 
-Return a single square PNG with true transparency. Do not return nine separate files.
-"""
+IDENTITY LOCK:
+Use the supplied character image as the identity reference. Show the same recognizable character exactly nine times, once per cell. Preserve the face, head shape, hair, clothing, signature colors, body proportions, and identity-essential details. Change only the expression, pose, and action required by each definition above. Do not add unrequested text; if an action explicitly requires visible text, render only that exact text inside its own safe cell.
+
+{FIXED_IMAGE_PROMPT_SUFFIX}"""
 
 
 def build_video_prompt_template(contents: Sequence[str]) -> str:
