@@ -3,45 +3,51 @@ name: da-motion-sticker-skill
 description: Create a 3×3 animated GIF sticker pack from a character reference image plus nine reactions or a theme. Use for nine-grid motion sticker, 九宫格动态表情包, or transparent sticker-pack requests; do not use for ordinary image edits, single stickers, or generic GIF conversion.
 ---
 
-# DA Motion Sticker
+# DA Motion Sticker Skill｜动态表情包制作器
 
-Turn one character reference into nine identity-consistent stickers, validate a real-alpha 3×3 master, animate the complete sticker shapes, and deliver a reproducible ZIP.
+Produce nine independently usable transparent GIF stickers, not only a grid preview. Preserve the reference character, keep every subject isolated inside its own cell, and finish with one delivery folder plus a ZIP.
 
-## Start the job
+## Intake
 
-Require one character reference image. Accept either exactly nine user-supplied items or one theme. For a theme, infer nine distinct reactions/actions in the conversation, fix their left-to-right and top-to-bottom order, and pass that explicit list to `scripts/create_job.py`; the script itself does not call a model.
+Require one character reference image and nine reactions, Emoji, or short action descriptions. A theme is acceptable when it clearly implies nine distinct reactions; otherwise propose nine and obtain confirmation.
 
-Accept a style by number, preset name, or free description. If absent, choose the best matching preset from [references/styles.md](references/styles.md). Default `static=false` and `pet=false`. Preserve original display text in the manifest while scripts create ASCII-safe filenames.
+- Style: accept a named/numbered preset. If absent, inspect the reference, read [references/styles.md](references/styles.md), recommend three suitable presets, and ask the user to choose.
+- Static stickers: optional and **off by default**. Do not ask merely to reconfirm the default. If enabled, include nine transparent PNGs in delivery.
+- Layout: fixed at 3 columns × 3 rows, row-major numbering `01`–`09`.
+- Preserve visible identity: face, hair/fur, silhouette, skin/fur color, clothing, accessories, and recognizable props. Do not redesign these unless requested.
 
-Read [references/output-contract.md](references/output-contract.md) before creating or resuming a job. Resume only from the exact `job.json` identified by its manifest and input SHA-256; never guess among unfinished jobs.
+## Workflow
 
-## Choose the key, then build and validate the master
+1. Create a job directory outside this skill package for the current character. Keep source, prepared assets, GIFs, reports, and delivery together.
+2. Run `scripts/compile_prompts.py` with the chosen style and exactly nine reactions. It writes a solid-background source prompt and a screen-aware video prompt template.
+3. Use the attached character image with a callable reference-image generation tool. Generate one square opaque 3×3 sheet on the exact uniform pure-green source background `#00FF00`. **Do not ask Codex/ImageGen for a transparent image in the current compatibility mode.** Save the returned file. Reject gradients, scenes, checkerboards, textured backgrounds, shadows, or non-uniform gutters.
+4. Run `scripts/prepare_sheet.py`. It removes only the uniform source background connected to the canvas edge, creates and validates real Alpha locally, detects the actual 3×3 gutters, writes nine working PNG cells, chooses the safest final video screen from green/blue/magenta/white, composites the screen sheet, and records a report. The fixed green source-generation background and the dynamically selected video screen are separate stages. If the source image has no clean uniform edge-connected background, stop and regenerate it; do not guess-mask a scene.
+5. Show the prepared transparent sheet and screen sheet. Ask the user to choose:
+   - **A · Codex 直接生成**: read [references/keypose-route.md](references/keypose-route.md). Compile one vision-informed motion plan per sticker, use reference-image generation to create real anticipation/action/recovery poses on the same uniform pure-green source background, convert them to ordered transparent key poses locally, then run `scripts/render_keypose_pack.py`. Do not ask the generator for transparent pose sheets. Do not animate the original PNG by whole-layer translation, rotation, scaling, bounce, shake, or sway.
+   - **B · AI 视频生成**: return `sheet-screen.png` and the compiled `video-prompt.txt`; mention Grok, Seedance 2.5, or 豆包 as examples, then stop and wait for the user to upload the resulting grid video. Do not claim the GIF pack is complete before the upload arrives.
+6. For route B, run `scripts/process_video.py` on the uploaded video. It samples the real video, detects persistent gutters, removes only screen-colored regions connected to each crop edge, exports nine transparent GIFs and first-frame PNGs, and writes `processing.json`.
+7. Only when the user explicitly asks for a Codex desktop pet, read [references/pet-route.md](references/pet-route.md), run `scripts/prepare_pet_handoff.py`, then use the available `hatch-pet` skill to map the nine reactions, add all required look directions and standard animation rows, visually QA, and package a v2 pet. A sticker-pack request alone does not authorize pet generation.
+8. Run `scripts/package_delivery.py`. It verifies that exactly nine animated GIFs exist, copies optional static PNGs only when requested, adds reports/prompts/screen assets, and creates the final ZIP.
 
-At job creation, measure visible character colors in the reference and select the least-conflicting fixed key: green `#00FF00`, blue `#0000FF`, or magenta `#FF00FF`. Ignore a likely flat photo backdrop when estimating character colors. Save all three scores and the chosen key in `job.json` before generation. If all three materially collide, stop and ask the user to choose one; never guess or accept another color.
+## Non-negotiable media rules
 
-Read [references/prompts.md](references/prompts.md), then use the installed `$imagegen` built-in generation path with the reference image visible. Do not call an Image API, external video API, or local image-generation CLI. Ask for a square 3×3 sheet on the exact selected fully opaque key color, with wide pure-color gutters and outer padding. Style traits never override the no-border, isolated-subject, or exact-key-background rules.
+- Generated source sheets are intentionally opaque and must use one flat, edge-connected pure-green background. Prepared sheets and delivered PNG/GIF assets must contain real Alpha after local conversion and validation. A simulated checkerboard fails.
+- The outer edge of each character meets transparency directly: no white/black/colored sticker outline, cut line, halo, glow, drop shadow, cell card, or opaque cell background. Internal line art belonging to the chosen style is allowed.
+- Keep wide transparent gutters. No subject, prop, confetti, tear, motion line, or effect may cross a cell boundary or overlap another cell.
+- Treat generated layout as untrusted until locally inspected. Stop if nine non-empty isolated cells cannot be recovered.
+- Screen color is chosen from actual foreground pixels. Use the exact selected RGB value in both the composited sheet and video prompt; do not leave a hard-coded green claim when another screen was selected.
+- For video matting, never delete a color globally. Remove only near-screen regions connected to crop borders so matching clothing and interior details survive.
+- Keep the camera fixed and each loop local to its cell. Do not add people, limbs, fingers, captions, props, scenery, shadows, or camera motion.
+- Route A requires genuine pose changes. Whole-layer affine animation is forbidden and is not an eligible fallback. If key-pose generation fails, stop and report or let the user choose route B.
+- Package only completed outputs and useful audit files; omit temporary extracted frames.
 
-Run `scripts/inspect_sheet.py`, which soft-keys the selected color, removes edge spill, creates the real-alpha transparent master, and then applies the normal nine-grid Alpha QA from [references/qa.md](references/qa.md). On automatic QA failure, make one targeted `$imagegen` retry using the same selected key. If that also fails, return the overlay preview and stop for user correction; do not keep regenerating.
+## References
 
-Run `scripts/prepare_assets.py` only after the keyed transparent sheet passes. It splits and pads nine 512×512 assets, preserves the validated generated chroma master, and writes the already-selected color name and hex value into the video prompt. Do not reselect or change the key after image generation.
+- Read [references/styles.md](references/styles.md) when selecting or explaining one of the 36 presets.
+- Read [references/prompts.md](references/prompts.md) before image generation or when revising a prompt.
+- Read [references/video-route.md](references/video-route.md) for A/B commands, upload handoff, and video-background constraints.
+- Read [references/keypose-route.md](references/keypose-route.md) before executing route A.
+- Read [references/output-contract.md](references/output-contract.md) before final packaging.
+- Read [references/pet-route.md](references/pet-route.md) only for an explicit Codex pet request.
 
-The chroma set is closed: accept only green `#00FF00`, blue `#0000FF`, or magenta `#FF00FF`, including for a user's explicit conflict-resolution choice. Never accept an arbitrary hex color.
-
-## Choose an animation route
-
-If the route was not supplied earlier, ask only after the chroma master exists:
-
-- **Codex direct generation**: first run `scripts/prepare_assets.py --job <job.json> --route local` to move the verified `awaiting_route` job to `assets_prepared`, then run `scripts/animate_local.py`. Motion is limited to whole-sticker translation, rotation, scale, and slight squash using controlled templates. Do not redraw limbs or add tears, text, props, particles, or other effects.
-- **AI video generation**: read [references/video-handoff.md](references/video-handoff.md), run `scripts/prepare_assets.py --job <job.json> --route video` to atomically enter `waiting_for_video`, provide the chroma master and generated prompt, and stop until the user uploads a video. Then run `scripts/process_video.py` against the same verified job.
-
-Both routes are fixed at 512×512, 12 fps, and approximately one second per GIF. Low-confidence video grid detection requires the hashed preview and explicit user confirmation. A different upload may replace a bound review-state video only with `--replace-video`; retain the earlier source and history. Accept partial video delivery: package successful GIFs and report failures. If all nine fail, do not create an empty ZIP.
-
-## Package and optional pet
-
-Run `scripts/package_job.py` only after at least one GIF exists. The ZIP contract is defined in [references/output-contract.md](references/output-contract.md); static PNGs are included only when `static=true`.
-
-Only when the user explicitly requests a Codex pet, read [references/pet-handoff.md](references/pet-handoff.md) and invoke the installed `$hatch-pet`. Treat the original character and sticker outputs as identity/action references, not as nine pet states. Require the full v2 pet workflow and install the approved pet directly; never add it to the sticker ZIP. If `$hatch-pet` is absent, report the optional dependency and do not install it automatically.
-
-## Stop conditions
-
-Stop without guessing or overwriting when the reference is missing, nine items cannot be fixed, a target path or symlink already exists, a resume hash or job revision mismatches, repeated sheet QA fails, chroma selection is ambiguous, video-grid confidence is low, all video cells fail, FFmpeg/FFprobe is unavailable, or an optional pet dependency is missing. Preserve diagnostics and the current job state for recovery; resume only the exact job after verifying its immutable intake and artifact hashes.
+Use paths relative to this skill directory. Run scripts with `python3`; `ffmpeg` and `ffprobe` are required for route B.

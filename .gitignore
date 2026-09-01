@@ -1,12 +1,6 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.coverage
 .DS_Store
-.venv/
+works/
 dist/
-build/
-*.egg-info/
-runs/
-smoke-output/
-

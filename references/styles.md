@@ -1,63 +1,44 @@
-# Conflict-safe style library
+# 36 种风格库
 
-Use this catalog when the user selects a style by number/name or when `style=auto`. Apply only the listed material, line, palette, and character-shape traits.
+在用户未指定风格时，先看角色的媒介、轮廓、服装复杂度与预期使用场景，再推荐三个候选。不要一次把 36 个选项全部倒给用户。真正编译提示词时使用 `assets/style-presets.json` 中对应 `id` 或 `slug` 的英文提示片段。
 
-## Global invariants override every preset
-
-Every output remains a genuine-alpha, background-free 3×3 sheet with nine separated characters. The outer silhouette touches transparency directly. Never add an outer white/black/color sticker border, die-cut edge, cell panel, scenery, cast/contact/drop shadow, floor patch, glow, halo, aura, detached decoration, or cross-cell element. Keep all texture and graphic treatment clipped inside the character or an identity-essential held prop. Internal line art is allowed.
-
-If a source style normally relies on paper, UI, stars, rays, scanlines, print offsets, or environmental motifs, express those traits inside the subject silhouette. Do not turn them into a cell background. These invariants take priority over the style name, a free-form description, and any example language.
-
-## Presets
-
-| # | Name | Conflict-safe traits | Good fit |
+| ID | 风格 | 视觉重点 | 更适合 |
 |---:|---|---|---|
-| 1 | 低保真剪纸 Meme | Coarse paper grain, deliberately cut edges, awkward proportions, exaggerated internet-reaction faces; **no white cutline**. | Absurd reactions, crying, side-eye, giving up |
-| 2 | Q版大头 Chibi | Head at roughly 50–65% of height, tiny torso and limbs, clean shapes, identity-preserving facial cues. | Friendly chat stickers and broad emotion sets |
-| 3 | 3D 软陶 / Clay | Rounded hand-shaped volumes, subtle fingerprints and matte clay material, compact big-head proportions. | Joy, awe, tears, shock |
-| 4 | 3D 毛绒玩偶 | Short plush fibers contained by a clean silhouette, stitched material details, collectible-toy proportions. | A recurring personal mascot or cozy reactions |
-| 5 | 搪胶公仔 / Vinyl Toy | Smooth molded surfaces, simplified glossy volumes, bold collectible-figure proportions. | Branded character systems and playful reactions |
-| 6 | 黏土定格 | Rougher handmade clay, visible tool marks, intentionally clumsy pose design. | Deadpan and absurd meme motion |
-| 7 | 像素 / Pixel Art | Crisp 8-bit or 16-bit clusters, limited palette, game-like pose readability; no HUD or labels. | Tech, gaming, programmer, Codex themes |
-| 8 | 复古街机 | Rich 1990s arcade sprite palette, chunky pixel shading, expressive combat-like silhouettes; no HP bars or UI panels. | Energetic action and achievement reactions |
-| 9 | 日漫夸张表情 | Bold internal manga line work, elastic facial construction, strong pose language; no detached speed or focus lines. | Shock, disbelief, frustration, curiosity |
-| 10 | 美式卡通 Meme | Heavy internal ink lines, flat color blocks, adult-animation timing and deadpan facial shapes. | Side-eye, smugness, disbelief |
-| 11 | 报纸漫画 | Pen-and-ink line work, restrained red/yellow/blue, warm paper tones clipped inside the character only. | Dry humor and workplace reactions |
-| 12 | 复古漫画网点 | Ben-Day dots and slight CMYK misregistration clipped to the subject, high-impact internal ink. | Loud surprise and refusal poses |
-| 13 | 黑白漫画 | Near-monochrome palette, high contrast, controlled internal black masses and expressive hatching. | Silence, collapse, skepticism |
-| 14 | 手绘涂鸦 | Uneven sketch lines, intentionally naive anatomy, spontaneous coloring contained by the silhouette. | Awkward, silly, low-fi reactions |
-| 15 | 儿童蜡笔 | Thick waxy strokes, uneven fill, simplified shapes and deliberately innocent construction. | Adult sentiments with comic contrast |
-| 16 | 油画恶搞 | Classical brushwork, modeled face and fabric, modern absurd pose; no painted backdrop or frame. | Formal-vs-modern meme contrast |
-| 17 | 文艺复兴名画 Meme | Classical drapery, solemn pose design, old-master palette and modeling inside the isolated figure; no rays or scenery. | Waiting, failure, mock-heroic reactions |
-| 18 | 浮世绘 Meme | Woodblock contours, flat color areas, period pattern language within clothing/props; no surrounding waves or clouds. | Modern actions in a traditional visual idiom |
-| 19 | 中国传统年画 | Saturated red/green/yellow palette, woodblock texture, festive stylized anatomy; no decorative background panel. | Lunar New Year and celebratory sets |
-| 20 | 国潮剪纸 | Extremely flat red-paper construction, cutout-like internal negative shapes, modern emoji-informed poses; no external cutline. | Festive, graphic, high-readability reactions |
-| 21 | 水墨 Meme | Expressive ink contour, wash gradation and restrained negative-space logic within the subject; no detached splashes. | Quiet, dry, contemplative humor |
-| 22 | 刺绣 / 布艺贴章 | Thread direction, fabric weave, internal stitched detail and simplified patch-like shapes; no separate patch border. | Brand mascots and tactile craft looks |
-| 23 | 毛毡布贴 | Layered felt shapes, soft fibrous material, visible hand assembly inside a clean silhouette. | Warm handmade characters |
-| 24 | 纸雕 / Layered Paper | Multiple paper layers and internal edge depth, achieved without cast/drop shadows or a backing panel. | Refined graphic sticker sets |
-| 25 | 撕纸拼贴 Meme | Torn internal edges, mixed magazine/paper textures, deliberately rough collage construction; no loose scraps outside the subject. | Chaotic and absurd actions |
-| 26 | Riso 孔版印刷 | Two-to-four ink colors, grain and slight registration drift clipped within the character. | Contemporary design-led IP |
-| 27 | 丝网印刷 | Limited colors, high contrast, coarse ink texture and bold simplified shapes. | Indie-merch energy and strong silhouettes |
-| 28 | Y2K 网络表情 | Early-web color choices, intentionally compressed rendering and metallic/iridescent accents contained inside the subject; no floating stars or text. | Nostalgic internet reactions |
-| 29 | VHS / 低清截图 | Color drift, grain and scanline treatment clipped to the character, readable low-resolution silhouette. | Found-footage and reaction-frame humor |
-| 30 | Windows 95 / 复古电脑 UI | Gray UI palette, beveled geometry and pixel-system motifs integrated into clothing/body/held props; no windows, labels, or cell panels. | AI, programmer, error-state themes |
-| 31 | Mac OS 复古系统图标 | Classic Macintosh pixel palette, compact icon geometry and hourglass/bomb-inspired shapes integrated into the character; no dialog box. | Desktop-helper and retro-computing themes |
-| 32 | Emoji 3D 混合 | Identity-preserving face with simplified emoji-like body language, rounded 3D forms and direct emotional readability. | Mainstream chat reactions |
-| 33 | 表情符号拟人 | Character anatomy interprets the selected emoji expression through brows, eyes, mouth, hands and pose; no detached symbols. | Complete emoji-driven reaction sets |
-| 34 | Reaction GIF 截帧 | Strong in-motion pose, deliberate pose imbalance and restrained subject-clipped motion softness; keep edges extractable. | Outputs intended to feel immediately animated |
-| 35 | 夸张真人头 + 卡通小身体 | Photographic facial identity with a very small illustrated body and maximal scale contrast. | Personal-IP recognition and absurdity |
-| 36 | 半写实 3D 大头人物 | Recognizable facial structure, polished semi-real 3D materials, highly chibi body proportions. | Balanced identity preservation and sticker appeal |
+| 01 | 低保真剪纸 Meme | 粗颗粒、纸纹、荒诞剪贴 | 哭、疑惑、耍酷、摆烂 |
+| 02 | Q版大头 Chibi | 50%–65% 大头、极短手脚 | 通用聊天、微信贴纸 |
+| 03 | 3D 软陶 / Clay | 圆润软陶、轻微指纹 | 庆祝、惊喜、崩溃 |
+| 04 | 3D 毛绒玩偶 | 短绒毛、收藏玩偶感 | 固定个人 IP |
+| 05 | 搪胶公仔 / Vinyl Toy | 光滑潮玩、盲盒比例 | 系列化品牌角色 |
+| 06 | 黏土定格动画 | 手作痕迹、笨拙动作感 | 荒诞 Meme |
+| 07 | 像素 Pixel Art | 8/16-bit、游戏技能感 | 科技、程序员、Codex |
+| 08 | 复古街机游戏 | 90 年代街机、HP/Combo | 故事性动作包 |
+| 09 | 日漫夸张表情 | 爆筋、瀑布泪、集中线 | 震惊、完蛋、又来 |
+| 10 | 美式卡通 Meme | 粗线、扁平色块、成人动画感 | 侧目、冷脸、得意 |
+| 11 | 报纸漫画 | 钢笔线、旧纸感、少量原色 | 职场冷幽默 |
+| 12 | 复古漫画网点 | Ben-Day 网点、CMYK 错位 | WHAT、NO、惊讶 |
+| 13 | 黑白漫画 | 高反差、大黑影 | 无语、崩溃、沉默 |
+| 14 | 手绘涂鸦 | 歪线、便签速写、不精致 | 笨拙反应 Meme |
+| 15 | 儿童蜡笔 | 粗蜡笔、不均匀涂色 | 反差型成年吐槽 |
+| 16 | 油画恶搞 | 古典肖像质感、现代动作 | 反差 Meme |
+| 17 | 文艺复兴名画 Meme | 神圣光感、古典姿态 | 等待、崩溃、重启 |
+| 18 | 浮世绘 Meme | 木版线、浪花云纹 | 骑车、喝咖啡、跳舞 |
+| 19 | 中国传统年画 | 高饱和红绿黄、木版质感 | 春节与喜庆系列 |
+| 20 | 国潮剪纸 | 红色扁平剪纸、现代 Emoji | 节庆国潮反差 |
+| 21 | 水墨 Meme | 水墨、留白、现代动作 | 克制冷幽默 |
+| 22 | 刺绣 / 布艺贴章 | 线迹、布纹、徽章质感 | 品牌 IP |
+| 23 | 毛毡布贴 | 彩色毛毡拼接、手工感 | 温暖可爱角色 |
+| 24 | 纸雕 / Layered Paper | 多层纸张、细腻层次 | 精致立体贴纸 |
+| 25 | 撕纸拼贴 Meme | 撕裂边、报刊色纸拼贴 | 脏、野、荒诞动作 |
+| 26 | Riso 孔版印刷 | 2–4 色、套色偏移、颗粒 | 年轻设计感 IP |
+| 27 | 丝网印刷 | 高反差、限制色、粗颗粒 | 独立乐队周边感 |
+| 28 | Y2K 网络表情包 | 镭射、低清 PNG、闪光星星 | LOL/OMG 网络语感 |
+| 29 | VHS / 低清截图 | 色偏、扫描线、录像颗粒 | 强 Meme 截帧感 |
+| 30 | Windows 95 UI | 弹窗、错误框、进度条 | AI、程序员主题 |
+| 31 | Mac OS 复古图标 | 老 Macintosh 像素 UI | 桌面助手角色 |
+| 32 | Emoji 3D 混合 | 真人脸识别 + Emoji 身体元素 | 直接聊天反应 |
+| 33 | 表情符号拟人 | 放大 Emoji 面部语义 | 完整 Emoji 人物库 |
+| 34 | Reaction GIF 截帧 | 强动作姿势、轻微运动错位 | 后续动画生成 |
+| 35 | 夸张真人头 + 卡通小身体 | 摄影质感脸、超小卡通身体 | 个人 IP 识别度 |
+| 36 | 半写实 3D 大头人物 | 真人特征 + 高度 Q 版身体 | 识别度与贴纸感平衡 |
 
-## `auto` recommendation
-
-Choose one preset, state its number and name in the job, and avoid silently mixing several unrelated visual systems.
-
-- Favor **2, 32, or 36** when identity recognition and broad chat usability matter most.
-- Favor **1, 6, 14, 25, 29, or 34** for intentionally awkward internet-meme energy.
-- Favor **3, 4, 5, 22, 23, or 24** for a tactile, collectible or mascot-led result.
-- Favor **7, 8, 28, 30, or 31** for game, software, AI or retro-digital themes.
-- Favor **16–21** when the humor depends on a traditional-art versus modern-action contrast.
-- Favor **26 or 27** for limited-color graphic design, and **9, 10, 12, or 13** for line-led comic reactions.
-
-When the reference strongly establishes a medium, prefer the closest compatible preset. A free style description may refine a preset, but it cannot weaken the global invariants.
+所有预设都服从最终透明贴纸输出契约。生成阶段允许且当前默认使用整张统一纯绿色 `#00FF00` 临时背景，但风格本身不能再生成第二层场景、纸张底板、UI 窗口、阴影或其他不透明格子背景。即使某种风格常见白边或底板，也只能把必要纹理与小元素限制在角色内部或角色附近，不能生成外轮廓贴纸边。

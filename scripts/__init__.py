@@ -1,1 +1,1 @@
-"""Deterministic helpers for the da-motion-sticker-skill skill."""
+"""Helpers for da-motion-sticker-skill."""

@@ -1,26 +1,10 @@
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "da-motion-sticker-skill"
-version = "0.1.0"
-description = "Deterministic media helpers for the da-motion-sticker-skill Codex skill"
-readme = "README.md"
-requires-python = ">=3.10"
-license = "MIT"
-authors = [{ name = "DAAI" }]
-dependencies = [
-  "numpy>=1.24,<3",
-  "Pillow>=10,<13",
-]
-
-[project.optional-dependencies]
-test = ["pytest>=8,<10"]
-
-[tool.setuptools]
-packages = ["scripts"]
+version = "1.0.0"
+description = "Codex skill helpers for nine-grid transparent animated sticker packs"
+requires-python = ">=3.9"
+dependencies = ["Pillow>=9.0", "numpy>=1.21"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
 testpaths = ["tests"]
+addopts = "-q"
